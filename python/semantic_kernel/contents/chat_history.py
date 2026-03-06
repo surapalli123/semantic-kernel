@@ -345,6 +345,15 @@ class ChatHistory(KernelBaseModel):
         except ParseError as exc:
             logger.info(f"Could not parse prompt {prompt} as xml, treating as text, error was: {exc}")
             return cls(messages=[ChatMessageContent(role=AuthorRole.USER, content=unescape(prompt))])
+        has_children = has_recognized = False
+        for item in xml_prompt:
+            has_children = True
+            if item.tag in (CHAT_MESSAGE_CONTENT_TAG, CHAT_HISTORY_TAG):
+                has_recognized = True
+                break
+        if has_children and not has_recognized:
+            logger.debug("Prompt contains no recognized message tags, treating as plain text.")
+            return cls(messages=[ChatMessageContent(role=AuthorRole.USER, content=unescape(prompt))])
         if xml_prompt.text and xml_prompt.text.strip():
             messages.append(ChatMessageContent(role=AuthorRole.SYSTEM, content=unescape(xml_prompt.text.strip())))
         for item in xml_prompt:

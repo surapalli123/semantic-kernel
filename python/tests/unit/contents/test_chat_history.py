@@ -526,6 +526,31 @@ async def test_handwritten_xml_invalid():
     assert chat_history.messages[0].role == AuthorRole.USER
 
 
+async def test_html_tags_in_prompt_template():
+    """Test that HTML tags like <p> in a prompt template are preserved as plain text.
+
+    Regression test for: https://github.com/microsoft/semantic-kernel/issues/13632
+    When the template contains HTML tags, the content inside those tags should not be lost.
+    """
+    template = 'Translate following message from English language into the Spanish language - "<p>What is your name?</p>"'
+    rendered = await KernelPromptTemplate(
+        prompt_template_config=PromptTemplateConfig(name="test", description="test", template=template)
+    ).render(kernel=Kernel(), arguments=KernelArguments())
+    chat_history = ChatHistory.from_rendered_prompt(rendered)
+    assert len(chat_history.messages) == 1
+    assert chat_history.messages[0].role == AuthorRole.USER
+    assert "What is your name?" in chat_history.messages[0].content
+
+
+def test_html_tags_in_prompt_direct():
+    """Test from_rendered_prompt directly with HTML tags to ensure content is not lost."""
+    prompt = 'Translate this: "<p>What is your name?</p>"'
+    chat_history = ChatHistory.from_rendered_prompt(prompt)
+    assert len(chat_history.messages) == 1
+    assert chat_history.messages[0].role == AuthorRole.USER
+    assert "What is your name?" in chat_history.messages[0].content
+
+
 async def test_handwritten_xml_as_arg_safe():
     template = "{{$input}}"
     rendered = await KernelPromptTemplate(
